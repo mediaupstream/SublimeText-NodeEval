@@ -27,7 +27,9 @@ Usage
 -----
 After installation you will have:  
 
-* Right-click menu item `NodeEval` and `Tools > NodeEval`  
+* Context Menu and `Tools` Menu items:
+  - `NodeEval` - evaluate the current selection(s) / document with `node`
+  - `NodeEval - Continuous (Toggle)` - Continually evaluate the current selection(s) / document with `node`. This command is a toggle for the current document / selection(s) only. You can set the refresh rate in the Sublime settings (see below)
 * Default keyboard shortcuts:  
   - `ctrl+n,e`  
 * Package Settings: `Preferences > Package Settings > NodeEval`  
@@ -49,7 +51,10 @@ After installation you will have:
 
       // if set to true the output is copied to the clipboard
       // if `output` is set to "clipboard" this value is ignored
-      "copy_to_clipboard": false
+      "copy_to_clipboard": false,
+
+      // refresh rate threshold for "continuous" mode (in milliseconds)
+      "threshold": 200
     }
   ```
 

@@ -12,5 +12,3 @@ console.log(message);   // should output: hello WORLD
 console.log( Math.PI ); // yum!
 
 tm.bar(); // yes, this is eval'd as a node script. outputs: foobar
-
-console.log('foobar');

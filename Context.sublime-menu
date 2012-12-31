@@ -5,7 +5,7 @@
   "args": {}
 },{
     "id": "nodeevalcontext",
-    "caption": "NodeEval - Continuous (Enable)",
+    "caption": "NodeEval - Continuous (Toggle)",
     "command": "node_eval", 
     "args": {
       "continuous":true

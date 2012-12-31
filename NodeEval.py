@@ -12,33 +12,40 @@ context menu and see the results in the console.
 
 '''
 
-import sublime, sublime_plugin, os
+import sublime, sublime_plugin, os, time, threading
+from functools import partial
 from subprocess import Popen, PIPE, STDOUT
 
+
+# 
+# Globals
+# 
 g_enabled = False
 g_view = None
+g_threshold = int (sublime.load_settings("NodeEval.sublime-settings").get('threshold'))
+
 
 # 
 # Toggle continuous eval'ing of a selection/document
 # 
 class Continuous(sublime_plugin.EventListener):
+  prev = 0
+  def check_threshold(self, stamp):
+    global g_view
+    if stamp == self.prev:
+      self.prev = 0
+      if g_view != None: _node_eval(g_view[0], g_view[1], True)
+
   def on_modified(self, view):
     global g_enabled
     global g_view
+    global g_threshold
     if g_enabled == False: return False
-    # ... figure out how we can do this in a timeout
-    # rather than on_modified
-    # if g_view != None: _node_eval(g_view[0], g_view[1])
-  
-  def on_activated(self, view):
-    global g_enabled
-    global g_view
-    if g_enabled == False: return False
+    if view.id() == g_view[0].view.id():
+      stamp = time.time()
+      self.prev = stamp
+      sublime.set_timeout( partial(self.check_threshold, stamp), g_threshold)
 
-  def on_deactivated(self, view):
-    global g_enabled
-    global g_view
-    if g_enabled == False: return False
 
 #
 # Create a new output, insert the message and show it
@@ -90,8 +97,9 @@ def panel(view, message, region):
 #
 # Helper to output views
 #
-def _output_to_view(v, output_file, output, clear=True, syntax="Packages/JavaScript/JavaScript.tmLanguage"):
-    output_file.set_syntax_file(syntax)
+def _output_to_view(v, output_file, output, clear=True):
+    # syntax="Packages/JavaScript/JavaScript.tmLanguage"
+    # output_file.set_syntax_file(syntax)
     edit = output_file.begin_edit()
     if clear:
       region = sublime.Region(0, output_file.size())
@@ -157,15 +165,16 @@ class NodeEvalCommand(sublime_plugin.TextCommand):
     _node_eval(self, edit)
 
 
-def _node_eval(s, edit):
+def _node_eval(s, edit, focus=False):
   # save the document size
     view_size = s.view.size()
     # get selections
     regions = s.view.sel()
+    n_regions = list(regions)
     num = len(regions)
     x = len(s.view.substr(regions[0]))
     # select the whole document if there is no user selection
-    if num <= 1 and x == 0:
+    if num <= 1 and x == 0 or focus:
       regions.clear()
       regions.add( sublime.Region(0, view_size) )
 
@@ -180,3 +189,9 @@ def _node_eval(s, edit):
     for region in regions:
       data = s.view.substr(region)
       eval(s.view, data, region)
+
+    regions.clear()
+    regions.add(n_regions[0])
+
+    if focus:
+      s.view.window().focus_view( s.view )
