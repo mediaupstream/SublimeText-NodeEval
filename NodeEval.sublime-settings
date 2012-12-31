@@ -1,0 +1,19 @@
+{
+  // The absolute path to your nodejs executable
+  // e.g. "/usr/local/bin/node" or "C:\\bin\\node.exe"
+  "node_command": "/usr/local/bin/node",
+
+  // How to output the results, options include:
+  // - new [default] "send output to a new file"
+  // - console       "send output to a new Panel (Console) view"
+  // - replace       "overwrite the current file/selection with the output"
+  // - clipboard     "there is no output, output copied to clipboard"
+  "output": "new",
+
+  // if output type is "new" the output is overwritten, set to false to append the output
+  "overwrite_output": true,
+
+  // if set to true the output is copied to the clipboard
+  // if `output` is set to "clipboard" this value is ignored
+  "copy_to_clipboard": false
+}
