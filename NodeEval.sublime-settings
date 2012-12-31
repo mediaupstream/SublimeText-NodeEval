@@ -8,6 +8,7 @@
   // - console       "send output to a new Panel (Console) view"
   // - replace       "overwrite the current file/selection with the output"
   // - clipboard     "there is no output, output copied to clipboard"
+  // - continious    "not implemented, continually eval your script as you type..."
   "output": "new",
 
   // if output type is "new" the output is overwritten, set to false to append the output
