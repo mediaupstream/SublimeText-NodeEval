@@ -7,6 +7,13 @@
     "caption": "NodeEval",
     "command": "node_eval", 
     "args": {}
+    },{
+    "id": "nodeevalmenu",
+    "caption": "NodeEval - Continuous (Toggle)",
+    "command": "node_eval", 
+    "args": {
+      "continuous":true
+    }
     }]
 },{
   "caption": "Preferences",

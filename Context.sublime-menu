@@ -3,4 +3,11 @@
   "caption": "NodeEval",
   "command": "node_eval",
   "args": {}
+},{
+    "id": "nodeevalcontext",
+    "caption": "NodeEval - Continuous (Enable)",
+    "command": "node_eval", 
+    "args": {
+      "continuous":true
+    }
 }]

@@ -15,6 +15,30 @@ context menu and see the results in the console.
 import sublime, sublime_plugin, os
 from subprocess import Popen, PIPE, STDOUT
 
+g_enabled = False
+g_view = None
+
+# 
+# Toggle continuous eval'ing of a selection/document
+# 
+class Continuous(sublime_plugin.EventListener):
+  def on_modified(self, view):
+    global g_enabled
+    global g_view
+    if g_enabled == False: return False
+    # ... figure out how we can do this in a timeout
+    # rather than on_modified
+    # if g_view != None: _node_eval(g_view[0], g_view[1])
+  
+  def on_activated(self, view):
+    global g_enabled
+    global g_view
+    if g_enabled == False: return False
+
+  def on_deactivated(self, view):
+    global g_enabled
+    global g_view
+    if g_enabled == False: return False
 
 #
 # Create a new output, insert the message and show it
@@ -119,20 +143,34 @@ def eval(view, data, region):
 # Get the selected text regions (or the whole document) and process it
 #
 class NodeEvalCommand(sublime_plugin.TextCommand):
-  def run(self, edit):
-    # save the document size
-    view_size = self.view.size()
+  def run(self, edit, continuous=False):
+    global g_enabled
+    global g_view
+
+    if continuous and g_enabled == False:
+      g_enabled = True
+      g_view = self, edit
+    elif continuous and g_enabled == True:
+      g_enabled = False
+      g_view = None
+    # Do it!
+    _node_eval(self, edit)
+
+
+def _node_eval(s, edit):
+  # save the document size
+    view_size = s.view.size()
     # get selections
-    regions = self.view.sel()
+    regions = s.view.sel()
     num = len(regions)
-    x = len(self.view.substr(regions[0]))
+    x = len(s.view.substr(regions[0]))
     # select the whole document if there is no user selection
     if num <= 1 and x == 0:
       regions.clear()
       regions.add( sublime.Region(0, view_size) )
 
     # get current document encoding or set sane defaults
-    encoding = self.view.encoding()
+    encoding = s.view.encoding()
     if encoding == 'Undefined':
       encoding = 'utf-8'
     elif encoding == 'Western (Windows 1252)':
@@ -140,5 +178,5 @@ class NodeEvalCommand(sublime_plugin.TextCommand):
 
     # eval selections
     for region in regions:
-      data = self.view.substr(region)
-      eval(self.view, data, region)
+      data = s.view.substr(region)
+      eval(s.view, data, region)
