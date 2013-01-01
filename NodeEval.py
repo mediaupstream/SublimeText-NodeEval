@@ -68,9 +68,10 @@ def panel(view, message, region):
     p.end_edit(p_edit)
     p.show(p.size())
     window.run_command("show_panel", {"panel": "output.nodeeval_panel"})
+    return False
 
   # Output to a new file
-  elif output == 'new':
+  if output == 'new':
     active = False
     for tab in window.views():
       if 'NodeEval::Output' == tab.name(): active = tab
@@ -78,18 +79,20 @@ def panel(view, message, region):
       _output_to_view(view, active, message, clear=clear)
       window.focus_view(active)
     else: scratch(view, message, "NodeEval::Output", clear=clear)
+  return False
 
   # Output to the current view/selection (work performed in the calling method)
-  elif output == 'replace':
+  if output == 'replace':
     edit = view.begin_edit()
     view.replace(edit, region, message)
     view.end_edit(edit)
-
-  elif output == 'clipboard':
-    sublime.set_clipboard( message )
-
-  else:
     return False
+
+  if output == 'clipboard':
+    sublime.set_clipboard( message )
+    return False
+  
+  return False
 
 
 
