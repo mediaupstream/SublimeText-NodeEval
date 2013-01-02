@@ -79,7 +79,7 @@ def panel(view, message, region):
       _output_to_view(view, active, message, clear=clear)
       window.focus_view(active)
     else: scratch(view, message, "NodeEval::Output", clear=clear)
-  return False
+    return False
 
   # Output to the current view/selection (work performed in the calling method)
   if output == 'replace':
