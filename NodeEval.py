@@ -133,7 +133,10 @@ def eval(view, data, region):
   node_command = os.path.normpath(s.get('node_command'))
   try:
     # node = Popen([node_command, "-p", data.encode("utf-8")], stdout=PIPE, stderr=PIPE)
-    node = Popen([node_command, "-p"], cwd=cwd, stdin=PIPE, stdout=PIPE, stderr=PIPE, close_fds=True)
+    if os.name == 'nt':
+      node = Popen([node_command, "-p"], cwd=cwd, stdin=PIPE, stdout=PIPE, stderr=PIPE)
+    else:
+      node = Popen([node_command, "-p"], cwd=cwd, stdin=PIPE, stdout=PIPE, stderr=PIPE, close_fds=True)
     node.stdin.write( data.encode("utf-8") )
     result, error = node.communicate()
   except OSError,e:
