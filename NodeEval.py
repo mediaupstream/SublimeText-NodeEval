@@ -142,7 +142,7 @@ def eval(view, data, region):
  Attempting to execute: %s
  Error: %s
     """ % (node_command, e[1])
-    panel(view, error_message)
+    panel(view, error_message, False)
     return False
 
   message = error if error else result
