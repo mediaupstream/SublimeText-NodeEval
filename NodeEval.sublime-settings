@@ -18,5 +18,16 @@
   "copy_to_clipboard": false,
 
   // refresh rate threshold for "continuous" mode
-  "threshold": 200
+  "threshold": 200,
+
+  // Set any extra ENVIRONMENT Variables as an object
+  // @example
+  //    "env": {
+  //      "NODE_PATH":"/path/to/node",
+  //      "NODE_MODULES":"/path/to/node_modules"
+  //    }
+  // @note: if you start sublime from a terminal using `subl` your normal environment
+  // variables should be available to you 
+  "env": {}
+
 }

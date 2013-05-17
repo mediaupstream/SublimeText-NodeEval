@@ -23,6 +23,13 @@ from subprocess import Popen, PIPE, STDOUT
 g_enabled = False
 g_view = None
 g_threshold = int (sublime.load_settings("NodeEval.sublime-settings").get('threshold'))
+# copy the current environment
+g_env = os.environ.copy()
+# grab any extra environment variables from settings
+g_env_extra = sublime.load_settings("NodeEval.sublime-settings").get('env')
+# add them to the g_env dict
+if g_env_extra is not None:
+  g_env.update(g_env_extra)
 
 
 # 
@@ -136,7 +143,7 @@ def eval(view, data, region):
     if os.name == 'nt':
       node = Popen([node_command, "-p"], cwd=cwd, stdin=PIPE, stdout=PIPE, stderr=PIPE)
     else:
-      node = Popen([node_command, "-p"], cwd=cwd, stdin=PIPE, stdout=PIPE, stderr=PIPE, close_fds=True)
+      node = Popen([node_command, "-p"], cwd=cwd, stdin=PIPE, stdout=PIPE, stderr=PIPE, close_fds=True, env=g_env)
     node.stdin.write( data.encode("utf-8") )
     result, error = node.communicate()
   except OSError,e:
