@@ -1,4 +1,4 @@
-NodeEval Sublime Text 2 Package
+NodeEval Sublime Text 2 & 3 Package
 =============================
 
 ### Use the NodeJS binary to evaluate a document or selection(s) and print the results
@@ -54,7 +54,18 @@ After installation you will have:
       "copy_to_clipboard": false,
 
       // refresh rate threshold for "continuous" mode (in milliseconds)
-      "threshold": 200
+      "threshold": 200,
+      
+      // Set any extra ENVIRONMENT Variables as an object
+      // @example
+      //    "env": {
+      //      "NODE_PATH":"/path/to/node",
+      //      "NODE_MODULES":"/path/to/node_modules"
+      //    }
+      // @note: if you start sublime from a terminal using `subl` your normal environment
+      // variables should be available to you 
+      "env": {}
+
     }
   ```
 
@@ -64,7 +75,7 @@ Your results may contain `undefined` in places, for example if your last line is
 
 ----
 
-**Why not just use the NodeJS ST2 plugin, or the nodejsLauncher plugin ?**   
+**Why not just use the NodeJS plugin, or the nodejsLauncher plugin ?**   
 the `NodeJS` plugin is awesome, but it's also really bloated. also I don't think that the `nodejsLauncher` actually works, I looked at the sourcecode and was like wtf.
 
 

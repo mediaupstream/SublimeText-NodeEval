@@ -8,7 +8,7 @@
   // - console       "send output to a new Panel (Console) view"
   // - replace       "overwrite the current file/selection with the output"
   // - clipboard     "there is no output, output copied to clipboard"
-  "output": "new",
+  "output": "console",
 
   // if output type is "new" the output is overwritten, set to false to append the output
   "overwrite_output": true,

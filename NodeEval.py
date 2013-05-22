@@ -4,7 +4,7 @@
 @author   Derek Anderson
 @requires NodeJS
 
-This Sublime Text 2 plugin adds NodeJS "eval" functionality
+This Sublime Text 2 & 3 plugin adds NodeJS "eval" functionality
 to the right click context menu, etc.
 
 Usage: Make a selection (or not), Choose NodeEval from the 
@@ -16,20 +16,30 @@ import sublime, sublime_plugin, os, time, threading
 from functools import partial
 from subprocess import Popen, PIPE, STDOUT
 
+ST3 = int(sublime.version()) >= 3000
 
 # 
 # Globals
 # 
 g_enabled = False
 g_view = None
-g_threshold = int (sublime.load_settings("NodeEval.sublime-settings").get('threshold'))
+g_threshold = 0
 # copy the current environment
 g_env = os.environ.copy()
 # grab any extra environment variables from settings
-g_env_extra = sublime.load_settings("NodeEval.sublime-settings").get('env')
+g_env_extra = {}
 # add them to the g_env dict
 if g_env_extra is not None:
   g_env.update(g_env_extra)
+
+def plugin_loaded():
+  global g_env
+  global g_threshold
+  global g_env_extra
+  g_threshold = int (sublime.load_settings("NodeEval.sublime-settings").get('threshold'))
+  g_env_extra = sublime.load_settings("NodeEval.sublime-settings").get('env')
+  if g_env_extra is not None:
+    g_env.update(g_env_extra)
 
 
 # 
@@ -55,9 +65,23 @@ class Continuous(sublime_plugin.EventListener):
 
 
 #
+# ST3 needs a Text Command called to insert text
+#
+class EvalMessageCommand(sublime_plugin.TextCommand):
+  def run(self, edit, message, insert):
+    if insert is True:
+      self.view.insert(edit, self.view.size(), message)
+    else:
+      self.view.replace(edit, sublime.Region(insert[0], insert[1]), message)
+
+
+#
 # Create a new output, insert the message and show it
 #
 def panel(view, message, region):
+  if ST3 and not isinstance(message, str):
+    message = str(message, "utf-8")
+
   s = sublime.load_settings("NodeEval.sublime-settings")
   window = view.window()
   # Should we set the clipboard?
@@ -70,9 +94,12 @@ def panel(view, message, region):
   # Output to a Console (panel) view
   if output == 'console':
     p = window.get_output_panel('nodeeval_panel')
-    p_edit = p.begin_edit()
-    p.insert(p_edit, p.size(), message)
-    p.end_edit(p_edit)
+    if ST3:
+      p.run_command("eval_message", {"message": message, "insert": True})
+    else:
+      p_edit = p.begin_edit()
+      p.insert(p_edit, p.size(), message)
+      p.end_edit(p_edit)
     p.show(p.size())
     window.run_command("show_panel", {"panel": "output.nodeeval_panel"})
     return False
@@ -90,9 +117,12 @@ def panel(view, message, region):
 
   # Output to the current view/selection (work performed in the calling method)
   if output == 'replace':
-    edit = view.begin_edit()
-    view.replace(edit, region, message)
-    view.end_edit(edit)
+    if ST3:
+      view.run_command("eval_message", {"message": message, "insert": [region.a, region.b] })
+    else:
+      edit = view.begin_edit()
+      view.replace(edit, region, message)
+      view.end_edit(edit)
     return False
 
   if output == 'clipboard':
@@ -110,12 +140,18 @@ def panel(view, message, region):
 def _output_to_view(v, output_file, output, clear=True):
     # syntax="Packages/JavaScript/JavaScript.tmLanguage"
     # output_file.set_syntax_file(syntax)
-    edit = output_file.begin_edit()
-    if clear:
-      region = sublime.Region(0, output_file.size())
-      output_file.erase(edit, region)
-    output_file.insert(edit, 0, output)
-    output_file.end_edit(edit)
+    if ST3:
+      if clear:
+        output_file.run_command("eval_message", {"message": output, "insert": [0, output_file.size()]})
+      else:
+        output_file.run_command("eval_message", {"message": output, "insert": True })
+    else:
+      edit = output_file.begin_edit()
+      if clear:
+        region = sublime.Region(0, output_file.size())
+        output_file.erase(edit, region)
+      output_file.insert(edit, 0, output)
+      output_file.end_edit(edit)
 
 # 
 # Helper to output a new Scratch (temp) file
@@ -138,23 +174,26 @@ def eval(view, data, region):
   cwd = os.path.dirname(cwd) if cwd else None
   s = sublime.load_settings("NodeEval.sublime-settings")
   node_command = os.path.normpath(s.get('node_command'))
+  errors_to_catch = (FileNotFoundError, OSError) if ST3 else OSError
   try:
-    # node = Popen([node_command, "-p", data.encode("utf-8")], stdout=PIPE, stderr=PIPE)
     if os.name == 'nt':
       node = Popen([node_command, "-p"], cwd=cwd, stdin=PIPE, stdout=PIPE, stderr=PIPE)
     else:
       node = Popen([node_command, "-p"], cwd=cwd, stdin=PIPE, stdout=PIPE, stderr=PIPE, close_fds=True, env=g_env)
-    node.stdin.write( data.encode("utf-8") )
+
+    if ST3:
+      node.stdin.write(bytes(data, 'UTF-8'))
+    else:
+      node.stdin.write(data.encode("utf-8"))
     result, error = node.communicate()
-  except OSError,e:
+  except errors_to_catch as e:
     error_message = """
  Please check that the absolute path to the node binary is correct:
  Attempting to execute: %s
  Error: %s
-    """ % (node_command, e[1])
+    """ % (node_command, e)
     panel(view, error_message, False)
     return False
-
   message = error if error else result
   panel(view, message, region)
 
@@ -191,14 +230,6 @@ def _node_eval(s, edit, focus=False):
     if num <= 1 and x == 0 or focus:
       regions.clear()
       regions.add( sublime.Region(0, view_size) )
-
-    # get current document encoding or set sane defaults
-    encoding = s.view.encoding()
-    if encoding == 'Undefined':
-      encoding = 'utf-8'
-    elif encoding == 'Western (Windows 1252)':
-      encoding = 'windows-1252'
-
     # eval selections
     for region in regions:
       data = s.view.substr(region)
