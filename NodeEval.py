@@ -15,6 +15,7 @@ context menu and see the results in the console.
 import sublime, sublime_plugin, os, time, threading
 from functools import partial
 from subprocess import Popen, PIPE, STDOUT
+import subprocess
 
 ST3 = int(sublime.version()) >= 3000
 
@@ -177,7 +178,10 @@ def eval(view, data, region):
   errors_to_catch = (FileNotFoundError, OSError) if ST3 else OSError
   try:
     if os.name == 'nt':
-      node = Popen([node_command, "-p"], cwd=cwd, stdin=PIPE, stdout=PIPE, stderr=PIPE)
+      # Suppress showing the cmd.exe window for that split second
+      startupinfo = subprocess.STARTUPINFO()
+      startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+      node = Popen([node_command, "-p"], cwd=cwd, stdin=PIPE, stdout=PIPE, stderr=PIPE, startupinfo=startupinfo)
     else:
       node = Popen([node_command, "-p"], cwd=cwd, stdin=PIPE, stdout=PIPE, stderr=PIPE, close_fds=True, env=g_env)
 
