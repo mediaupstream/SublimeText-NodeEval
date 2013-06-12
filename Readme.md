@@ -82,8 +82,8 @@ the `NodeJS` plugin is awesome, but it's also really bloated. also I don't think
 
 Author & Contributors
 ----------------------
-[Derek Anderson](http://twitter.com/derekanderson)
-[Shane Walker](https://github.com/shane-walker)
+[Derek Anderson](http://twitter.com/derekanderson)  
+[Shane Walker](https://github.com/shane-walker)  
 [Shesh](https://github.com/recklesswaltz)
 
 
