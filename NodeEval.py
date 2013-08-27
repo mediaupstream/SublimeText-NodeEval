@@ -31,6 +31,7 @@ ST3 = int(sublime.version()) >= 3000
 g_enabled = False
 g_view = None
 g_threshold = 0
+g_replace_pos = 0
 # copy the current environment
 g_env = os.environ.copy()
 # grab any extra environment variables from settings
@@ -98,32 +99,29 @@ def panel(view, message, region, clear=False):
   # determine the output format
   output = s.get('output')
 
-  # Output to a Console (panel) view
-  if output == 'console':
+  # Output to a Console (panel) view or a new file
+  if output == 'console' or output == 'new':
     _output_to_view(view, g_output_panel, message, clear=clear)
     return False
 
-  # Output to a new file
-  if output == 'new':
-    for tab in window.views():
-      if 'NodeEval::Output' == tab.name(): 
-        _output_to_view(view, tab, message, clear=clear)
-        break
-    else: scratch(view, message, "NodeEval::Output", clear=clear)
-    return False
-
   # Output to the current view/selection (work performed in the calling method)
+  global g_replace_pos
   if output == 'replace':
+
     if ST3:
-      view.run_command("eval_message", {"message": message, "insert": [region.a, region.b] })
+      view.run_command("eval_message", 
+        {"message": message, "insert": [g_replace_pos, g_replace_pos] })
     else:
       edit = view.begin_edit()
-      view.replace(edit, region, message)
+      view.insert(edit, g_replace_pos, message)
+      view.sel().clear()
       view.end_edit(edit)
+
+    g_replace_pos += len(message.decode('utf-8')) #len(message)
     return False
 
   if output == 'clipboard':
-    sublime.set_clipboard( message )
+    sublime.set_clipboard( sublime.get_clipboard() + message )
     return False
   
   return False
@@ -154,13 +152,14 @@ def _output_to_view(v, output_file, output, clear=True):
 # 
 # Helper to output a new Scratch (temp) file
 # 
-def scratch(v, output, title=False, **kwargs):
+def scratch(v, title=False):
     scratch_file = v.window().new_file()
     if title:
       scratch_file.set_name(title)
     scratch_file.set_scratch(True)
-    _output_to_view(v, scratch_file, output, **kwargs)
+    #_output_to_view(v, scratch_file, output, **kwargs)
     scratch_file.set_read_only(False)
+    return scratch_file
 
 def _out_thread(view, node, region):
   while True:
@@ -191,12 +190,31 @@ def eval(view, data, region):
   options = s.get('command_options')
   window = view.window()
 
+  global g_output_panel
   if output == 'console':
-    global g_output_panel
     if g_output_panel is None:
       g_output_panel = window.get_output_panel('nodeeval_panel')
     window.run_command("show_panel", {"panel": "output.nodeeval_panel"})
   
+  if output == 'new':
+    for tab in window.views():
+      if 'NodeEval::Output' == tab.name(): 
+        g_output_panel = tab
+        window.focus_view(tab)
+        break 
+    else:
+        g_output_panel = scratch(view, 'NodeEval::Output')
+
+  if output == 'replace':
+    global g_replace_pos
+    g_replace_pos = region.begin()
+    edit = view.begin_edit()
+    view.replace(edit, region, '')
+    view.end_edit(edit)
+
+  if output == 'clipboard':
+    sublime.set_clipboard('')
+
   if clear:
     panel(view, "", region, True);
 
