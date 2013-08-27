@@ -97,7 +97,6 @@ def panel(view, message, region, clear=False):
   if clipboard: sublime.set_clipboard( message )
   # determine the output format
   output = s.get('output')
-  # clear = s.get('overwrite_output')
 
   # Output to a Console (panel) view
   if output == 'console':
@@ -109,7 +108,6 @@ def panel(view, message, region, clear=False):
     for tab in window.views():
       if 'NodeEval::Output' == tab.name(): 
         _output_to_view(view, tab, message, clear=clear)
-        # window.focus_view(tab)
         break
     else: scratch(view, message, "NodeEval::Output", clear=clear)
     return False
@@ -198,7 +196,7 @@ def eval(view, data, region):
     if g_output_panel is None:
       g_output_panel = window.get_output_panel('nodeeval_panel')
     window.run_command("show_panel", {"panel": "output.nodeeval_panel"})
-
+  
   if clear:
     panel(view, "", region, True);
 
