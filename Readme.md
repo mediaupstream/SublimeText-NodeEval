@@ -69,14 +69,12 @@ After installation you will have:
     }
   ```
 
-The commands work on a selection, multiple selections or if nothing is selected the whole document. Your script will be eval'd through the nodejs repl.  
-
-Your results may contain `undefined` in places, for example if your last line is an expression who's return value is `undefined` you will see that in the output...  
+The commands work on a selection, multiple selections or if nothing is selected the whole document. Your script will be eval'd through `nodejs` in it's own thread.
 
 ----
 
 **Why not just use the NodeJS plugin, or the nodejsLauncher plugin ?**   
-the `NodeJS` plugin is awesome, but it's also really bloated. also I don't think that the `nodejsLauncher` actually works, I looked at the sourcecode and was like wtf.
+the `NodeJS` plugin is awesome, but it's also really bloated. also the `nodejsLauncher` only works on Windows.  
 
 
 
@@ -84,8 +82,8 @@ Contributors
 ----------------------
 [Derek Anderson](http://twitter.com/derekanderson)  
 [Shane Walker](https://github.com/shane-walker)  
-[Shesh](https://github.com/recklesswaltz)
-[akira-cn](https://github.com/akira-cn)
+[Shesh](https://github.com/recklesswaltz)  
+[akira-cn](https://github.com/akira-cn)  
 
 
 License
