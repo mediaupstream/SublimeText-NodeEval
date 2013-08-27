@@ -80,11 +80,12 @@ the `NodeJS` plugin is awesome, but it's also really bloated. also I don't think
 
 
 
-Author & Contributors
+Contributors
 ----------------------
 [Derek Anderson](http://twitter.com/derekanderson)  
 [Shane Walker](https://github.com/shane-walker)  
 [Shesh](https://github.com/recklesswaltz)
+[akira-cn](https://github.com/akira-cn)
 
 
 License
