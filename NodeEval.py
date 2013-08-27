@@ -17,6 +17,12 @@ from functools import partial
 from subprocess import Popen, PIPE, STDOUT
 import subprocess
 
+import thread
+
+import sys
+reload(sys)
+sys.setdefaultencoding('utf-8')  
+
 ST3 = int(sublime.version()) >= 3000
 
 # 
@@ -25,6 +31,7 @@ ST3 = int(sublime.version()) >= 3000
 g_enabled = False
 g_view = None
 g_threshold = 0
+g_replace_pos = 0
 # copy the current environment
 g_env = os.environ.copy()
 # grab any extra environment variables from settings
@@ -75,65 +82,49 @@ class EvalMessageCommand(sublime_plugin.TextCommand):
     else:
       self.view.replace(edit, sublime.Region(insert[0], insert[1]), message)
 
-
 #
 # Create a new output, insert the message and show it
 #
-def panel(view, message, region):
+g_output_panel = None
+def panel(view, message, region, clear=False):
   if ST3 and not isinstance(message, str):
     message = str(message, "utf-8")
 
   s = sublime.load_settings("NodeEval.sublime-settings")
   window = view.window()
+
   # Should we set the clipboard?
   clipboard = s.get('copy_to_clipboard')
   if clipboard: sublime.set_clipboard( message )
   # determine the output format
   output = s.get('output')
-  clear = s.get('overwrite_output')
 
-  # Output to a Console (panel) view
-  if output == 'console':
-    p = window.get_output_panel('nodeeval_panel')
-    if ST3:
-      p.run_command("eval_message", {"message": message, "insert": True})
-    else:
-      p_edit = p.begin_edit()
-      p.insert(p_edit, p.size(), message)
-      p.end_edit(p_edit)
-    p.show(p.size())
-    window.run_command("show_panel", {"panel": "output.nodeeval_panel"})
-    return False
-
-  # Output to a new file
-  if output == 'new':
-    active = False
-    for tab in window.views():
-      if 'NodeEval::Output' == tab.name(): active = tab
-    if active: 
-      _output_to_view(view, active, message, clear=clear)
-      window.focus_view(active)
-    else: scratch(view, message, "NodeEval::Output", clear=clear)
+  # Output to a Console (panel) view or a new file
+  if output == 'console' or output == 'new':
+    _output_to_view(view, g_output_panel, message, clear=clear)
     return False
 
   # Output to the current view/selection (work performed in the calling method)
+  global g_replace_pos
   if output == 'replace':
+
     if ST3:
-      view.run_command("eval_message", {"message": message, "insert": [region.a, region.b] })
+      view.run_command("eval_message", 
+        {"message": message, "insert": [g_replace_pos, g_replace_pos] })
     else:
       edit = view.begin_edit()
-      view.replace(edit, region, message)
+      view.insert(edit, g_replace_pos, message)
+      view.sel().clear()
       view.end_edit(edit)
+
+    g_replace_pos += len(message.decode('utf-8')) #len(message)
     return False
 
   if output == 'clipboard':
-    sublime.set_clipboard( message )
+    sublime.set_clipboard( sublime.get_clipboard() + message )
     return False
   
   return False
-
-
-
 
 #
 # Helper to output views
@@ -151,20 +142,38 @@ def _output_to_view(v, output_file, output, clear=True):
       if clear:
         region = sublime.Region(0, output_file.size())
         output_file.erase(edit, region)
-      output_file.insert(edit, 0, output)
+      output_file.insert(edit, output_file.size(), output)
       output_file.end_edit(edit)
+      #scroll to the last line of the view
+      output_file.run_command("goto_line", {"line": output_file.rowcol(output_file.size())[0]+1})
+      output_file.sel().clear()
+      output_file.sel().add(output_file.size())
 
 # 
 # Helper to output a new Scratch (temp) file
 # 
-def scratch(v, output, title=False, **kwargs):
+def scratch(v, title=False):
     scratch_file = v.window().new_file()
     if title:
       scratch_file.set_name(title)
     scratch_file.set_scratch(True)
-    _output_to_view(v, scratch_file, output, **kwargs)
+    #_output_to_view(v, scratch_file, output, **kwargs)
     scratch_file.set_read_only(False)
+    return scratch_file
 
+def _out_thread(view, node, region):
+  while True:
+    out_line = node.stdout.readline()
+    if out_line:
+      write = partial(panel, view, out_line, region)
+      sublime.set_timeout(write, 1)
+
+def _err_thread(view, node, region):
+  while True:
+    err_line = node.stderr.readline()
+    if err_line:
+      write = partial(panel, view, err_line, region)
+      sublime.set_timeout(write, 1)
 
 #
 # Eval the "data" (message) with basically: `node -p -e data`
@@ -173,23 +182,63 @@ def eval(view, data, region):
   # get the current working dir, if one exists...
   cwd = view.file_name()
   cwd = os.path.dirname(cwd) if cwd else None
-  s = sublime.load_settings("NodeEval.sublime-settings")
-  node_command = os.path.normpath(s.get('node_command'))
   errors_to_catch = (FileNotFoundError, OSError) if ST3 else OSError
+  
+  s = sublime.load_settings("NodeEval.sublime-settings")
+  clear = s.get('overwrite_output')
+  output = s.get('output')
+  options = s.get('command_options')
+  window = view.window()
+
+  global g_output_panel
+  if output == 'console':
+    if g_output_panel is None:
+      g_output_panel = window.get_output_panel('nodeeval_panel')
+    window.run_command("show_panel", {"panel": "output.nodeeval_panel"})
+  
+  if output == 'new':
+    for tab in window.views():
+      if 'NodeEval::Output' == tab.name(): 
+        g_output_panel = tab
+        window.focus_view(tab)
+        break 
+    else:
+        g_output_panel = scratch(view, 'NodeEval::Output')
+
+  if output == 'replace':
+    global g_replace_pos
+    g_replace_pos = region.begin()
+    edit = view.begin_edit()
+    view.replace(edit, region, '')
+    view.end_edit(edit)
+
+  if output == 'clipboard':
+    sublime.set_clipboard('')
+
+  if clear:
+    panel(view, "", region, True);
+
+  if ST3:
+   code = bytes(data, 'UTF-8')
+  else:
+   code = data.encode("utf-8")
+
   try:
+    s = sublime.load_settings("NodeEval.sublime-settings")
+    node_command = os.path.normpath(s.get('node_command'))
+    
     if os.name == 'nt':
       # Suppress showing the cmd.exe window for that split second
       startupinfo = subprocess.STARTUPINFO()
       startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-      node = Popen([node_command, "-p"], cwd=cwd, stdin=PIPE, stdout=PIPE, stderr=PIPE, startupinfo=startupinfo)
+      node = Popen([node_command] + options + ["-e", code], cwd=cwd, stdin=PIPE, stdout=PIPE, stderr=PIPE, startupinfo=startupinfo)
     else:
-      node = Popen([node_command, "-p"], cwd=cwd, stdin=PIPE, stdout=PIPE, stderr=PIPE, close_fds=True, env=g_env)
+      node = Popen([node_command] + options + ["-e", code], cwd=cwd, stdin=PIPE, stdout=PIPE, stderr=PIPE, close_fds=True, env=g_env)
 
-    if ST3:
-      node.stdin.write(bytes(data, 'UTF-8'))
-    else:
-      node.stdin.write(data.encode("utf-8"))
-    result, error = node.communicate()
+    thread.start_new_thread(_out_thread, (view, node, region))
+    thread.start_new_thread(_err_thread, (view, node, region))
+
+    return True
   except errors_to_catch as e:
     error_message = """
  Please check that the absolute path to the node binary is correct:
@@ -198,9 +247,6 @@ def eval(view, data, region):
     """ % (node_command, e)
     panel(view, error_message, False)
     return False
-  message = error if error else result
-  panel(view, message, region)
-
 
 
 #
@@ -238,6 +284,7 @@ def _node_eval(s, edit, focus=False):
     for region in regions:
       data = s.view.substr(region)
       eval(s.view, data, region)
+      #thread.start_new_thread(eval, (s.view, data, region))
 
     regions.clear()
     regions.add(n_regions[0])
