@@ -3,6 +3,10 @@
   // e.g. "/usr/local/bin/node" or "C:\\bin\\node.exe"
   "node_command": "/usr/local/bin/node",
 
+  // The options of node command
+  // e.g. ["--harmony"]
+  "command_options": [],
+
   // How to output the results, options include:
   // - new [default] "send output to a new file"
   // - console       "send output to a new Panel (Console) view"
