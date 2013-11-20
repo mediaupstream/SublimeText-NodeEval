@@ -8,7 +8,11 @@ x.forEach(function(i){
   message += b[i];
 })
 
-console.log(message);   // should output: hello WORLD
-console.log( Math.PI ); // yum!
+console.log(message);     // hello WORLD
+console.log( Math.PI );   // 3.141592653589793
+console.log( tm.bar() );  // foobar
 
-tm.bar(); // yes, this is eval'd as a node script. outputs: foobar
+// The following will lock up SublimeText for 10 seconds in Windows OS
+setTimeout(function(){
+    console.log('Goodbye');
+}, 10000);

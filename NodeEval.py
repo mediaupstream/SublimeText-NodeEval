@@ -12,12 +12,15 @@ context menu and see the results in the console.
 
 '''
 
-import sublime, sublime_plugin, os, time, threading
+import sublime, sublime_plugin, os, time
 from functools import partial
 from subprocess import Popen, PIPE, STDOUT
 import subprocess
 
-import thread
+
+if os.name != 'nt':
+  import thread, threading
+
 
 import sys
 reload(sys)
@@ -28,6 +31,7 @@ ST3 = int(sublime.version()) >= 3000
 # 
 # Globals
 # 
+g_hasThreading = False if (os.name == 'nt') else True
 g_enabled = False
 g_view = None
 g_threshold = 0
@@ -235,10 +239,13 @@ def eval(view, data, region):
     else:
       node = Popen([node_command] + options + ["-e", code], cwd=cwd, stdin=PIPE, stdout=PIPE, stderr=PIPE, close_fds=True, env=g_env)
 
-    thread.start_new_thread(_out_thread, (view, node, region))
-    thread.start_new_thread(_err_thread, (view, node, region))
+    if g_hasThreading:
+      thread.start_new_thread(_out_thread, (view, node, region))
+      thread.start_new_thread(_err_thread, (view, node, region))
+      return True
+    else:
+      result, error = node.communicate()
 
-    return True
   except errors_to_catch as e:
     error_message = """
  Please check that the absolute path to the node binary is correct:
@@ -247,6 +254,8 @@ def eval(view, data, region):
     """ % (node_command, e)
     panel(view, error_message, False)
     return False
+  message = error if error else result
+  panel(view, message, region)
 
 
 #
