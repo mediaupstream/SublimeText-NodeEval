@@ -84,6 +84,7 @@ Contributors
 [Shane Walker](https://github.com/shane-walker)  
 [Shesh](https://github.com/recklesswaltz)  
 [akira-cn](https://github.com/akira-cn)  
+[Jakub Gutkowski](https://github.com/Gutek)
 
 
 License
