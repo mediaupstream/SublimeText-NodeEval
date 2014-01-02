@@ -17,21 +17,26 @@ from functools import partial
 from subprocess import Popen, PIPE, STDOUT
 import subprocess
 
-
-if os.name != 'nt':
-  import thread, threading
-
-
 import sys
+
+PY3 = sys.version_info[0] >= 3
+if PY3:
+  from imp import reload 
 reload(sys)
-sys.setdefaultencoding('utf-8')  
+
+if not PY3:
+  sys.setdefaultencoding('utf-8')  
+
+if not PY3:
+  import thread
+
+import threading
 
 ST3 = int(sublime.version()) >= 3000
 
 # 
 # Globals
 # 
-g_hasThreading = False if (os.name == 'nt') else True
 g_enabled = False
 g_view = None
 g_threshold = 0
@@ -239,12 +244,17 @@ def eval(view, data, region):
     else:
       node = Popen([node_command] + options + ["-e", code], cwd=cwd, stdin=PIPE, stdout=PIPE, stderr=PIPE, close_fds=True, env=g_env)
 
-    if g_hasThreading:
+    if not ST3:
       thread.start_new_thread(_out_thread, (view, node, region))
       thread.start_new_thread(_err_thread, (view, node, region))
       return True
     else:
-      result, error = node.communicate()
+      # result, error = node.communicate()
+      out_thread = threading.Thread(target=_out_thread, args=(view, node, region))
+      err_thread = threading.Thread(target=_err_thread, args=(view, node, region))
+      out_thread.start()
+      err_thread.start()
+      return True      
 
   except errors_to_catch as e:
     error_message = """
@@ -254,8 +264,8 @@ def eval(view, data, region):
     """ % (node_command, e)
     panel(view, error_message, False)
     return False
-  message = error if error else result
-  panel(view, message, region)
+  # message = error if error else result
+  # panel(view, message, region)
 
 
 #
